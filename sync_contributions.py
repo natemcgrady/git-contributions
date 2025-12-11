@@ -121,6 +121,10 @@ def create_commits_for_date(repo, date, count):
         data[date_str] = 0
     data[date_str] = max(data[date_str], count)
     
+    # Calculate time interval to distribute commits evenly throughout the day
+    total_seconds = 24 * 60 * 60  # 24 hours in seconds
+    interval_seconds = total_seconds // count if count > 0 else 0
+    
     for i in range(count):
         data['_last_sync'] = f"{date_str}_{i+1}"
         
@@ -129,7 +133,13 @@ def create_commits_for_date(repo, date, count):
         
         repo.index.add([data_file])
         
-        commit_time = datetime.combine(date, time_obj(hour=12, minute=i*5)).replace(tzinfo=timezone.utc)
+        # Distribute commits evenly throughout the day
+        seconds_since_midnight = i * interval_seconds
+        hours = seconds_since_midnight // 3600
+        minutes = (seconds_since_midnight % 3600) // 60
+        seconds = seconds_since_midnight % 60
+        
+        commit_time = datetime.combine(date, time_obj(hour=hours, minute=minutes, second=seconds)).replace(tzinfo=timezone.utc)
         repo.index.commit(
             f'Sync contribution for {date_str}',
             author_date=commit_time,
